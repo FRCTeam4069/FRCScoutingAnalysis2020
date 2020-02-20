@@ -1,6 +1,9 @@
+#!/usr/bin/env python3
+
 import argparse
 import firebase_admin
 import matplotlib.pyplot as plt
+import numpy as np
 from firebase_admin import firestore
 
 # Arguments for output graph
@@ -35,20 +38,34 @@ for response in db.collection('response').stream():
 
     # Only save data to relevant teams
     if response_dict['Team Number'] in args.teams:
-        for x_value in range(len(args.x_axis)):
-            x[args.teams.index(response_dict['Team Number'])][x_value].append(float(response_dict[args.x_axis[x_value]]))
-        for y_value in range(0, len(args.y_axis)):
-            y[args.teams.index(response_dict['Team Number'])][y_value].append(float(response_dict[args.y_axis[y_value]]))
+        # Do this for the x and y axis values
+        for axis_args, array in [(args.x_axis, x), (args.y_axis, y)]:
+            for i, attr in enumerate(axis_args):
+                team_number = response_dict['Team Number']
+                team_idx = args.teams.index(team_number)
+                # Sometimes there are blank strings
+                try:
+                    attr_value = float(response_dict[attr])
+                except ValueError:
+                    attr_value = np.nan
+                array[team_idx][i].append(attr_value)
+
+print(x)
+print(y)
 
 for team in range(len(args.teams)):
     for i in range(len(args.y_axis)):
-        mean = sum(y[team][i]) / len(y[team][i])
         color = next(current_axis._get_lines.prop_cycler)['color']
+        # Sort the X axis values so that the line graph looks right
+        sort_order = np.argsort(x[team][0])
+        x_values = np.array(x[team][0])[sort_order]
+        y_values = np.array(y[team][i])[sort_order]
+        plt.plot(x_values, y_values, label=args.teams[team], color=color)
 
-        plt.plot(sorted(x[team][0]), [x for _, x in sorted(zip(x[team][0], y[team][i]))],
-                 label=args.teams[team], color=color)
-        plt.plot(range(int(max(x[team][0]))), [mean for x in range(int(max(x[team][0])))],
-                 label=args.teams[team]+' Mean', linestyle='--', color=color)
+        # Draw a secondary line containing the mean for that team
+        mean = np.nanmean(y_values)
+        x_range = [np.nanmin(x_values), np.nanmax(x_values)]
+        plt.plot(x_range, [mean, mean], label=args.teams[team]+' Mean', linestyle='--', color=color)
 
 plt.legend()
 plt.show()
