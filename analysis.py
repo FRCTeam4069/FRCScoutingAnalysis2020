@@ -2,20 +2,21 @@ import argparse
 import firebase_admin
 from firebase_admin import firestore
 
-# Initialize firebase
-# Enter path to JSON credentials
-cred = firebase_admin.credentials.Certificate('scoutingapp-8b476-firebase-adminsdk-590vi-fe2c23c752.json')
-firebase_admin.initialize_app(cred)
-db = firestore.client()
-
 # Arguments for output graph
 parser = argparse.ArgumentParser(description='View data collected from Scouting App')
 parser.add_argument('--database', '-d', required=True, help='Choose database')
 parser.add_argument('--teams', '-t', nargs='+', required=True, help='Enter in team numbers to be displayed')
 parser.add_argument('--x_axis', '-x', nargs='+', required=True, help='Values displayed on x-axis')
 parser.add_argument('--y_axis', '-y', nargs='+', required=True, help='Values displayed on y-axis')
+parser.add_argument('--cred', '-c', required=True, help='Path to database credentials')
 
 args = parser.parse_args()
+
+# Initialize firebase
+# Enter path to JSON credentials
+cred = firebase_admin.credentials.Certificate(args.cred)
+firebase_admin.initialize_app(cred)
+db = firestore.client()
 
 # Blank lists for values collected for graphing
 # x = [[[]]*len(args.x_axis)]*len(args.teams) idk why tf this doesn't work
