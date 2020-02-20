@@ -1,9 +1,10 @@
 #!/usr/bin/env python3
 
 import argparse
-import firebase_admin
+import sys
 import matplotlib.pyplot as plt
 import numpy as np
+import firebase_admin
 from firebase_admin import firestore
 
 # Arguments for output graph
@@ -28,6 +29,9 @@ current_axis = plt.gca()
 x = [[[] for i in range(len(args.x_axis))] for i in range(len(args.teams))]
 y = [[[] for i in range(len(args.y_axis))] for i in range(len(args.teams))]
 
+# Make sure we find all the teams; if not, exit with an error
+found_teams = {num: False for num in args.teams}
+
 # Go through each response and collect data needed for graph and teams
 for response in db.collection('response').stream():
     response_dict = response.to_dict()
@@ -42,6 +46,7 @@ for response in db.collection('response').stream():
         for axis_args, array in [(args.x_axis, x), (args.y_axis, y)]:
             for i, attr in enumerate(axis_args):
                 team_number = response_dict['Team Number']
+                found_teams[team_number] = True
                 team_idx = args.teams.index(team_number)
                 # Sometimes there are blank strings
                 try:
@@ -50,8 +55,13 @@ for response in db.collection('response').stream():
                     attr_value = np.nan
                 array[team_idx][i].append(attr_value)
 
-print(x)
-print(y)
+teams_not_found = []
+for num in args.teams:
+    if not found_teams[num]:
+        teams_not_found.append(num)
+if teams_not_found:
+    print('Teams', teams_not_found, 'not found')
+    sys.exit()
 
 for team in range(len(args.teams)):
     for i in range(len(args.y_axis)):
